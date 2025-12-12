@@ -5,6 +5,60 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+      const calculateDynamicUpdate = (newRequest) => {
+      const currentRes = resultsRef.current;
+      const currStep = currentStepRef.current;
+      const dir = directionRef.current;
+      const maxT = maxTrackRef.current;
+      
+      const nextResults = { ...currentRes };
+      
+      Object.keys(algorithms).forEach(algoKey => {
+          const currentAlgoResult = currentRes[algoKey];
+          const historySequence = currentAlgoResult.sequence.slice(0, currStep + 1);
+          
+          const currentHeadPos = historySequence.length > 0 ? historySequence[historySequence.length - 1] : headRef.current;
+          
+          const oldFutureSequence = currentAlgoResult.sequence.slice(currStep + 1);
+          const realRequests = oldFutureSequence.filter(r => r !== 0 && r !== maxT); 
+          const newPendingQueue = [...realRequests, newRequest];
+
+          let dynamicDirection = dir;
+          if (algoKey === 'scan' && historySequence.length >= 2) {
+              const last = historySequence[historySequence.length - 1];
+              const prev = historySequence[historySequence.length - 2];
+              dynamicDirection = last > prev ? 'right' : 'left';
+          }
+
+          const newFutureResult = algorithms[algoKey].fn(currentHeadPos, newPendingQueue, dynamicDirection, maxT);
+          
+          const newFullSequence = [...historySequence, ...newFutureResult.sequence.slice(1)];
+          
+          let newSeekCount = 0;
+          const newSteps = [];
+          for (let i = 0; i < newFullSequence.length - 1; i++) {
+              const dist = Math.abs(newFullSequence[i+1] - newFullSequence[i]);
+              newSeekCount += dist;
+              newSteps.push({
+                  from: newFullSequence[i],
+                  to: newFullSequence[i+1],
+                  distance: dist,
+                  explanation: `Moving from ${newFullSequence[i]} to ${newFullSequence[i+1]} (distance: ${dist})`
+              });
+          }
+
+          nextResults[algoKey] = {
+              sequence: newFullSequence,
+              seekCount: newSeekCount,
+              avgSeek: newFullSequence.length > 1 ? newSeekCount / (newFullSequence.length - 1) : 0,
+              throughput: newSeekCount > 0 ? (newFullSequence.length - 1) / newSeekCount : 0,
+              steps: newSteps
+          };
+      });
+      
+      return nextResults;
+  };
+
 
     const handleRandomize = (length = queueLength) => {
     const count = length || queueLength;
