@@ -6,6 +6,52 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
 
+    const handleRandomize = (length = queueLength) => {
+    const count = length || queueLength;
+    const newQueue = Array.from({ length: count }, () => 
+      Math.floor(Math.random() * (maxTrack + 1))
+    );
+    setQueue(newQueue);
+    setHead(Math.floor(Math.random() * (maxTrack + 1)));
+    
+    const newResults = getFreshResults(Math.floor(Math.random() * (maxTrack + 1)), newQueue, direction, maxTrack);
+    setResults(newResults);
+    setCurrentStep(0);
+    setPlaybackState('paused');
+  };
+  
+  const handlePlayPause = () => {
+    if (currentStep >= maxSteps - 1 && !isDynamicMode) {
+      setCurrentStep(0);
+    }
+    
+    if (playbackState === 'paused') {
+      setTimeout(() => {
+        if (simulationRef.current) {
+          simulationRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 50);
+    }
+    
+    setPlaybackState(prev => prev === 'playing' ? 'paused' : 'playing');
+  };
+  
+  const handleStep = () => {
+    setCurrentStep(prev => Math.min(prev + 1, maxSteps - 1));
+  };
+
+  const handleStepBack = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+  };
+  
+  const handleReset = () => {
+    setCurrentStep(0);
+    setPlaybackState('paused');
+  };
+  
   return (
     <div className={`min-h-screen p-6 pb-32 relative transition-colors duration-500 ${styles.bg}`}>
       
