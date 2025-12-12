@@ -1,11 +1,33 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Sun, Moon, HardDrive } from 'lucide-react';
+import { themes } from './utils/theme';
+import { AlgorithmLogic } from './utils/algorithms';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Components
+import Controls from './components/controls/Controls';
+import PlaybackControlBar from './components/controls/PlaybackControlBar';
+import DiskVisualizer from './components/visualization/DiskVisualizer';
+import SeekChart from './components/visualization/SeekChart';
+import MetricsDisplay from './components/metrics/MetricsDisplay';
 
+export default function DiskSchedulingSimulator() {
+  const [head, setHead] = useState(50);
+  const [queue, setQueue] = useState([82, 170, 43, 140, 24, 16, 190]);
+  const [direction, setDirection] = useState('right');
+  const [viewMode, setViewMode] = useState('arena');
+  const [focusAlgo, setFocusAlgo] = useState('fcfs');
+  const [playbackState, setPlaybackState] = useState('paused');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [speed, setSpeed] = useState(1);
+  const [requestSpeed, setRequestSpeed] = useState(1);
+  const [graphMode, setGraphMode] = useState('stepByStep');
+  const [maxTrack, setMaxTrack] = useState(199);
+  const [queueLength, setQueueLength] = useState(7);
+  const [isDynamicMode, setIsDynamicMode] = useState(false);
+  const [lastAddedRequest, setLastAddedRequest] = useState(null);
+  const [theme, setTheme] = useState('dark');
+  
   const getFreshResults = (h, q, dir, max) => ({
     fcfs: AlgorithmLogic.fcfs(h, q),
     sstf: AlgorithmLogic.sstf(h, q),
@@ -32,8 +54,7 @@ function App() {
   useEffect(() => { maxTrackRef.current = maxTrack; }, [maxTrack]);
   useEffect(() => { headRef.current = head; }, [head]);
   
-
-    const algorithms = {
+  const algorithms = {
     fcfs: { name: 'FCFS', color: '#3b82f6', fn: AlgorithmLogic.fcfs },
     sstf: { name: 'SSTF', color: '#8b5cf6', fn: AlgorithmLogic.sstf },
     scan: { name: 'SCAN', color: '#ec4899', fn: AlgorithmLogic.scan },
@@ -71,7 +92,7 @@ function App() {
       setCurrentStep(0);
   };
 
-      const calculateDynamicUpdate = (newRequest) => {
+  const calculateDynamicUpdate = (newRequest) => {
       const currentRes = resultsRef.current;
       const currStep = currentStepRef.current;
       const dir = directionRef.current;
@@ -125,8 +146,54 @@ function App() {
       return nextResults;
   };
 
+  useEffect(() => {
+    let dynamicInterval;
+    if (isDynamicMode && playbackState === 'playing') {
+      dynamicInterval = setInterval(() => {
+        const currentQ = queueRef.current;
+        const currentMax = maxTrackRef.current;
+        
+        if (currentQ.length < 200) { 
+          const newRequest = Math.floor(Math.random() * (currentMax + 1));
+          
+          setQueue(prev => [...prev, newRequest]);
+          setLastAddedRequest(newRequest);
+          setTimeout(() => setLastAddedRequest(null), 3000);
+          
+          const updatedResults = calculateDynamicUpdate(newRequest);
+          setResults(updatedResults);
+        }
+      }, 2500 / requestSpeed);
+    }
+    return () => clearInterval(dynamicInterval);
+  }, [isDynamicMode, playbackState, requestSpeed]);
 
-    const handleRandomize = (length = queueLength) => {
+  const winner = Object.keys(results).reduce((min, key) => 
+    results[key].seekCount < results[min].seekCount ? key : min
+  );
+  
+  const maxSteps = Math.max(...Object.values(results).map(r => r.sequence.length));
+  const isFinished = currentStep >= maxSteps - 1;
+  
+  useEffect(() => {
+    if (playbackState === 'playing') {
+      const interval = setInterval(() => {
+        setCurrentStep(prev => {
+          const currentMaxSteps = Math.max(...Object.values(resultsRef.current).map(r => r.sequence.length));
+          
+          if (prev >= currentMaxSteps - 1) {
+            if (isDynamicMode) return prev; 
+            setPlaybackState('paused');
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000 / speed);
+      return () => clearInterval(interval);
+    }
+  }, [playbackState, speed, isDynamicMode]);
+  
+  const handleRandomize = (length = queueLength) => {
     const count = length || queueLength;
     const newQueue = Array.from({ length: count }, () => 
       Math.floor(Math.random() * (maxTrack + 1))
@@ -209,7 +276,7 @@ function App() {
             />
           </motion.div>
         )}
-        </AnimatePresence>
+      </AnimatePresence>
 
       <div className="max-w-7xl mx-auto">
         <motion.div 
@@ -432,7 +499,4 @@ function App() {
       />
     </div>
   );
-    
 }
-
-export default App
