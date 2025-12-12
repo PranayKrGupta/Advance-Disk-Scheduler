@@ -6,6 +6,33 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
 
+  const getFreshResults = (h, q, dir, max) => ({
+    fcfs: AlgorithmLogic.fcfs(h, q),
+    sstf: AlgorithmLogic.sstf(h, q),
+    scan: AlgorithmLogic.scan(h, q, dir, max),
+    cscan: AlgorithmLogic.cscan(h, q, dir, max)
+  });
+
+  const [results, setResults] = useState(() => getFreshResults(50, [82, 170, 43, 140, 24, 16, 190], 'right', 199));
+
+  // Refs
+  const simulationRef = useRef(null);
+  const currentStepRef = useRef(currentStep);
+  const resultsRef = useRef(results);
+  const queueRef = useRef(queue);
+  const directionRef = useRef(direction);
+  const maxTrackRef = useRef(maxTrack);
+  const headRef = useRef(head);
+
+  // Sync refs with state
+  useEffect(() => { currentStepRef.current = currentStep; }, [currentStep]);
+  useEffect(() => { resultsRef.current = results; }, [results]);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { directionRef.current = direction; }, [direction]);
+  useEffect(() => { maxTrackRef.current = maxTrack; }, [maxTrack]);
+  useEffect(() => { headRef.current = head; }, [head]);
+  
+
     const algorithms = {
     fcfs: { name: 'FCFS', color: '#3b82f6', fn: AlgorithmLogic.fcfs },
     sstf: { name: 'SSTF', color: '#8b5cf6', fn: AlgorithmLogic.sstf },
