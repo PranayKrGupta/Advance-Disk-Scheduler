@@ -5,6 +5,45 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+
+    const algorithms = {
+    fcfs: { name: 'FCFS', color: '#3b82f6', fn: AlgorithmLogic.fcfs },
+    sstf: { name: 'SSTF', color: '#8b5cf6', fn: AlgorithmLogic.sstf },
+    scan: { name: 'SCAN', color: '#ec4899', fn: AlgorithmLogic.scan },
+    cscan: { name: 'C-SCAN', color: '#10b981', fn: AlgorithmLogic.cscan }
+  };
+  
+  const styles = themes[theme];
+
+  // Re-calculate results only when configuration changes manually
+  useEffect(() => {
+    const newResults = getFreshResults(head, queue, direction, maxTrack);
+    setResults(newResults);
+  }, [direction, maxTrack, head]); 
+
+  // CRITICAL FIX: Enhanced Manual Queue Change Handler to prevent crashes
+  const handleManualQueueChange = (e) => {
+      const inputVal = e.target.value;
+      
+      // Parse the numbers
+      const values = inputVal.split(',')
+        .map(v => {
+          const num = parseInt(v.trim());
+          return isNaN(num) ? null : Math.max(0, Math.min(maxTrack, num));
+        })
+        .filter(v => v !== null);
+      
+      // SAFETY GUARD: If the resulting queue is empty, DO NOT update the state.
+      // This prevents the "White Screen" crash when clearing the input.
+      if (values.length === 0) {
+        return; 
+      }
+      
+      setQueue(values);
+      setResults(getFreshResults(head, values, direction, maxTrack));
+      setCurrentStep(0);
+  };
+
       const calculateDynamicUpdate = (newRequest) => {
       const currentRes = resultsRef.current;
       const currStep = currentStepRef.current;
